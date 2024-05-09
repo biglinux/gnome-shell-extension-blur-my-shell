@@ -1,16 +1,15 @@
-# Maintainer: Barnabé di Kartola <barnabedikartola@gmail.com>
+# Maintainer: Tales A. Mendonça <talesam@gmail.com>
 
-pkgname=biglinux-package-template
-pkgdesc="Package template for biglinux"
-# depends=('')
-# makedepends=('')
-# conflicts=('')
+pkgname=gnome-shell-extension-blur-my-shell
+_uuid=blur-my-shell@aunetx
+pkgdesc="Extension that adds a blur look to different parts of the GNOME Shell"
 pkgver=$(date +%y.%m.%d)
 pkgrel=$(date +%H%M)
 arch=('any')
-license=('GPL3')
-url="https://github.com/biglinux/$pkgname"
-provides=("$pkgname")
+license=('MIT')
+url="https://github.com/aunetx/blur-my-shell"
+depends=('gnome-shell')
+makedepends=('git')
 source=("git+${url}.git")
 md5sums=('SKIP')
 if [ -e "${pkgname}.install" ];then
@@ -19,24 +18,32 @@ elif [ -e "pkgbuild.install" ];then
     install=pkgbuild.install
 fi
 
+prepare() {
+  cd "${srcdir}/blur-my-shell"
+}
+
+build() {
+  cd "${srcdir}/blur-my-shell"
+  make
+}
+
 package() {
-    # Verify default folder
-    if [ -d "${srcdir}/${pkgname}/${pkgname}" ]; then
-        InternalDir="${srcdir}/${pkgname}/${pkgname}"
-    else
-        InternalDir="${srcdir}/${pkgname}"
-    fi
+  cd "${srcdir}/blur-my-shell"
+  # Verifique se o arquivo ZIP realmente existe
+  if [ ! -f "build/${_uuid}.shell-extension.zip" ]; then
+    echo "The expected ZIP file does not exist."
+    return 1 # Falha propositalmente se o arquivo ZIP não existir
+  fi
 
-    # Copy files
-    if [ -d "${InternalDir}/usr" ]; then
-        cp -r "${InternalDir}/usr" "${pkgdir}/"
-    fi
+  install -d "$pkgdir/usr/share/gnome-shell/extensions/${_uuid}"
+  bsdtar xvf "build/${_uuid}.shell-extension.zip" \
+    -C "$pkgdir/usr/share/gnome-shell/extensions/${_uuid}/" --no-same-owner
 
-    if [ -d "${InternalDir}/etc" ]; then
-        cp -r "${InternalDir}/etc" "${pkgdir}/"
-    fi
+  mv "$pkgdir/usr/share/gnome-shell/extensions/${_uuid}/locale" "$pkgdir/usr/share"
 
-    if [ -d "${InternalDir}/opt" ]; then
-        cp -r "${InternalDir}/opt" "${pkgdir}/"
-    fi
+  install -Dm644 schemas/org.gnome.shell.extensions.blur-my-shell.gschema.xml -t \
+    "$pkgdir/usr/share/glib-2.0/schemas/"
+  rm -rf "$pkgdir/usr/share/gnome-shell/extensions/${_uuid}/schemas"
+
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
 }
